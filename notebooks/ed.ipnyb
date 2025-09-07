@@ -1,0 +1,67 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Economic Dispatch (ED) quick run on Binder\n",
+    "\n",
+    "This notebook mirrors the ED example from your docs and is meant to be launched via Binder.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "using Pkg\n",
+    "println(\"Julia version: \", VERSION)\n",
+    "# If you later add Manifest.toml, this will use exact versions.\n",
+    "Pkg.activate(\".\")\n",
+    "Pkg.instantiate()\n",
+    "using JuMP, Ipopt, DataFrames\n",
+    "\n",
+    "# --- ED example ---\n",
+    "D = 100\n",
+    "genset = 1:3\n",
+    "C = [10, 20, 30]\n",
+    "G_min = [0, 0, 0]\n",
+    "G_max = [50, 50, 50]\n",
+    "\n",
+    "m = Model(Ipopt.Optimizer)\n",
+    "@variable(m, g[i in genset])\n",
+    "@objective(m, Min, sum(C[i] * g[i] for i in genset))\n",
+    "@constraint(m, SDbalance, sum(g[i] for i in genset) == D)\n",
+    "@constraint(m, glb[i in genset], g[i] >= G_min[i])\n",
+    "@constraint(m, gub[i in genset], g[i] <= G_max[i])\n",
+    "optimize!(m)\n",
+    "\n",
+    "results = DataFrame(\n",
+    "    Generator = genset,\n",
+    "    Cost = C,\n",
+    "    Dispatch = round.(value.(g).data, digits=2),\n",
+    "    Gmax = G_max,\n",
+    ")\n",
+    "println(results)\n",
+    "println(\"Total cost = \", objective_value(m))\n",
+    "println(\"SMP (dual of balance) = \", dual.(SDbalance))\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Julia",
+   "language": "julia",
+   "name": "julia-1.10"
+  },
+  "language_info": {
+   "file_extension": ".jl",
+   "mimetype": "application/julia",
+   "name": "julia",
+   "version": "1.10"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
